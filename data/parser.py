@@ -20,14 +20,16 @@ class PacketFeatures:
         id_fwd (tuple): 5-tuple (src_ip, src_port, dst_ip, dst_port, protocol)
         id_bwd (tuple): reversed 5-tuple (dst_ip, dst_port, src_ip, src_port, protocol)
         features_list (List[int | float]): extracted numerical features
+        timestamp (str): ISO-formatted timestamp (e.g., '2025-06-05T13:00:00.000Z')
     """
     def __init__(self):
         self.id_fwd = (0, 0, 0, 0, 0)
         self.id_bwd = (0, 0, 0, 0, 0)
         self.features_list = []
+        self.timestamp = None
 
     def __str__(self):
-        return f"{self.id_fwd} -> {self.features_list}"
+        return f"{self.id_fwd} @ {self.timestamp} -> {self.features_list}"
 
 
 def get_ddos_flows(attackers, victims):
@@ -105,6 +107,7 @@ def parse_packet(pkt):
 
     try:
         pf.features_list.append(float(pkt.sniff_timestamp))  # timestamp
+        pf.timestamp = float(pkt.sniff_timestamp)
         pf.features_list.append(int(pkt.ip.len))             # packet length
         pf.features_list.append(
             int(hashlib.sha256(str(pkt.highest_layer).encode()).hexdigest(), 16) % 10**8
@@ -208,8 +211,9 @@ def parse_packet_dict(pkt):
     src_ip = pkt["src_ip"] if is_dict else pkt.src_ip
     dst_ip = pkt["dst_ip"] if is_dict else pkt.dst_ip
     protocol = pkt["protocol"] if is_dict else pkt.protocol
+    timestamp = pkt["timestamp"] if is_dict else pkt.timestamp
 
     pf.id_fwd = (src_ip, 0, dst_ip, 0, protocol)
     pf.id_bwd = (dst_ip, 0, src_ip, 0, protocol)
-
+    pf.timestamp = timestamp
     return pf

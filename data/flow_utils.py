@@ -11,29 +11,35 @@ def dataset_to_list_of_fragments(dataset):
             - List of fragment arrays (X)
             - List of labels (y)
             - List of 5-tuples (keys)
-            - List of dict metadata (e.g., timestamp, src_ip, dst_ip)
+            - List of metadata dicts (X_metadata)
     """
     keys = []
     X = []
     y = []
-    metadata = []
+    X_metadata = []
 
     for flow_id, flow_data in dataset:
         label = flow_data.get('label', 0)
-
-        # 예시: flow_id = (timestamp, src_ip, dst_ip, proto)
-        timestamp, src_ip, dst_ip, *_ = flow_id
+        src_ip = flow_id[0]
+        dst_ip = flow_id[2]
 
         for key, fragment in flow_data.items():
-            if key != 'label':
+            if isinstance(key, float):  # start_time_window
                 X.append(fragment)
                 y.append(label)
                 keys.append(flow_id)
-                metadata.append({
-                    "timestamp": timestamp,
+
+                # Try to fetch associated timestamp
+                key_str = str(key)
+                timestamp = flow_data.get(f"timestamp_{key_str}", None)
+                if timestamp is None:
+                    print(f"[Warning] Missing timestamp for flow_id={flow_id}, key={key}")
+                X_metadata.append({
                     "src_ip": src_ip,
                     "dst_ip": dst_ip,
+                    "timestamp": timestamp
                 })
 
-    return X, y, keys, metadata
+    return X, y, keys, X_metadata
+
 

@@ -63,22 +63,32 @@ def store_packet(pf, temp_dict, start_time_window, max_flow_len):
         start_time_window (float): base timestamp for grouping
         max_flow_len (int): max number of packets per flow
     """
-    if pf is not None:
-        if pf.id_fwd in temp_dict and start_time_window in temp_dict[pf.id_fwd] and \
-                temp_dict[pf.id_fwd][start_time_window].shape[0] < max_flow_len:
-            temp_dict[pf.id_fwd][start_time_window] = np.vstack(
-                [temp_dict[pf.id_fwd][start_time_window], pf.features_list])
-        elif pf.id_bwd in temp_dict and start_time_window in temp_dict[pf.id_bwd] and \
-                temp_dict[pf.id_bwd][start_time_window].shape[0] < max_flow_len:
-            temp_dict[pf.id_bwd][start_time_window] = np.vstack(
-                [temp_dict[pf.id_bwd][start_time_window], pf.features_list])
-        else:
-            if pf.id_fwd not in temp_dict and pf.id_bwd not in temp_dict:
-                temp_dict[pf.id_fwd] = {start_time_window: np.array([pf.features_list]), 'label': 0}
-            elif pf.id_fwd in temp_dict and start_time_window not in temp_dict[pf.id_fwd]:
-                temp_dict[pf.id_fwd][start_time_window] = np.array([pf.features_list])
-            elif pf.id_bwd in temp_dict and start_time_window not in temp_dict[pf.id_bwd]:
-                temp_dict[pf.id_bwd][start_time_window] = np.array([pf.features_list])
+    if pf is None:
+        return temp_dict
+
+    flow_id = None
+    if pf.id_fwd in temp_dict:
+        flow_id = pf.id_fwd
+    elif pf.id_bwd in temp_dict:
+        flow_id = pf.id_bwd
+    else:
+        flow_id = pf.id_fwd  # default to fwd
+
+    # Initialize flow entry
+    if flow_id not in temp_dict:
+        temp_dict[flow_id] = {'label': 0}
+
+    # Initialize time window entry
+    if start_time_window not in temp_dict[flow_id]:
+        temp_dict[flow_id][start_time_window] = np.array([pf.features_list])
+        key_str = str(start_time_window)
+        temp_dict[flow_id][f"timestamp_{key_str}"] = pf.timestamp 
+    else:
+        if temp_dict[flow_id][start_time_window].shape[0] < max_flow_len:
+            temp_dict[flow_id][start_time_window] = np.vstack(
+                [temp_dict[flow_id][start_time_window], pf.features_list]
+            )
+
     return temp_dict
 
 def apply_labels(flows, labelled_flows, labels, traffic_type):
