@@ -231,21 +231,19 @@ def parse_labels_multiclass(dataset_type):
 
     return output_dict, label_map
 
-def parse_packet_dict(pkt: dict):
-    """
-    Convert a raw packet dictionary (from Kafka/Spark) into parsed format for flow processing.
+def parse_packet_dict(pkt):
+    pf = PacketFeatures()
 
-    Args:
-        pkt (dict): Dictionary with keys: timestamp, src_ip, dst_ip, protocol, length
+    # Spark Row 또는 dict 처리
+    is_dict = isinstance(pkt, dict)
 
-    Returns:
-        dict: Parsed packet format for flow aggregation
-    """
-    return {
-        "timestamp": pkt.get("timestamp"),
-        "src_ip": pkt.get("src_ip"),
-        "dst_ip": pkt.get("dst_ip"),
-        "protocol": pkt.get("protocol"),
-        "length": pkt.get("length")
-    }
+    pf.features_list = pkt["features"] if is_dict else pkt.features
 
+    src_ip = pkt["src_ip"] if is_dict else pkt.src_ip
+    dst_ip = pkt["dst_ip"] if is_dict else pkt.dst_ip
+    protocol = pkt["protocol"] if is_dict else pkt.protocol
+
+    pf.id_fwd = (src_ip, 0, dst_ip, 0, protocol)
+    pf.id_bwd = (dst_ip, 0, src_ip, 0, protocol)
+
+    return pf

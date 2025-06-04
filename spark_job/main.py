@@ -1,6 +1,6 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import from_json, col, to_timestamp, window, struct, collect_list
-from pyspark.sql.types import StructType, StringType, IntegerType
+from pyspark.sql.types import StructType, StringType, IntegerType, ArrayType, FloatType
 
 
 # spark_main.py (또는 별도 파일에)
@@ -55,7 +55,8 @@ def main():
         .add("src_ip", StringType()) \
         .add("dst_ip", StringType()) \
         .add("protocol", StringType()) \
-        .add("length", IntegerType())
+        .add("length", IntegerType()) \
+        .add("features", ArrayType(FloatType()))
 
     json_df = df.selectExpr("CAST(value AS STRING) as json_str")
     parsed_df = json_df.select(from_json(col("json_str"), packet_schema).alias("packet")).select("packet.*")
@@ -68,7 +69,7 @@ def main():
         window(col("event_time"), "5 seconds")
     ).agg(
         collect_list(
-            struct("timestamp", "src_ip", "dst_ip", "protocol", "length")
+            struct("timestamp", "src_ip", "dst_ip", "protocol", "length", "features")
         ).alias("packet_list")
     )
 
