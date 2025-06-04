@@ -40,17 +40,18 @@ def debug_batch_factory(dataset_type, labels, max_flow_len, time_window):
 
         print("Sample Count:", len(samples))
         if samples:
-            X, Y_true, keys = dataset_to_list_of_fragments(samples)
+            X_raw, Y_true, _, X_metadata = dataset_to_list_of_fragments(samples)
+
             run_prediction_loop(
-                X_raw=X,
+                X_raw=X_raw,
                 Y_true=Y_true,
+                X_metadata=X_metadata,
                 model=model,
                 model_name=model_name_string,
                 source_name=f"batch_{batch_id}",
                 mins=mins,
                 maxs=maxs,
                 max_flow_len=max_flow_len,
-                writer=None,  # CSV로 저장하지 않음
                 label_mode="multi"
             )
 

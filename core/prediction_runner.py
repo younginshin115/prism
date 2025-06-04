@@ -2,19 +2,18 @@ import numpy as np
 import time
 from data.data_loader import count_packets_in_dataset
 from utils.preprocessing import normalize_and_padding
-from utils.eval_logger import report_results
-
+from utils.prediction_logger import log_sample_predictions
 
 def run_prediction_loop(
     X_raw,
     Y_true,
+    X_metadata,
     model,
     model_name,
     source_name,
     mins,
     maxs,
     max_flow_len,
-    writer,
     packets=None,
     label_mode="binary"
 ):
@@ -51,80 +50,26 @@ def run_prediction_loop(
     # Format labels if available
     if label_mode == "multi":
         Y_pred = Y_pred_probs.argmax(axis=1)
+        Y_probs = Y_pred_probs.max(axis=1) 
         if Y_true is not None:
             Y_true = np.array(Y_true)
             if Y_true.ndim > 1:
                 Y_true = Y_true.argmax(axis=1)
     else:
         Y_pred = np.squeeze(Y_pred_probs > 0.5, axis=1)
+        Y_probs = np.squeeze(Y_pred_probs) 
         if Y_true is not None:
             Y_true = np.squeeze(np.array(Y_true))
 
     # Write results
-    report_results(
-        Y_true=Y_true,
+    log_sample_predictions(
+        X=X,
         Y_pred=Y_pred,
-        packets=packets,
+        Y_probs=Y_probs,
+        timestamps=[p["timestamp"] for p in X_metadata],
+        src_ips=[p["src_ip"] for p in X_metadata],
+        dst_ips=[p["dst_ip"] for p in X_metadata],
         model_name=model_name,
-        data_source=source_name,
-        prediction_time=prediction_time,
-        writer=writer,
-        label_mode=label_mode
-    )
-
-def run_prediction_loop_preprocessed(
-    X,
-    Y_true,
-    model,
-    model_name,
-    source_name,
-    writer,
-    packets=None,
-    label_mode="binary"
-):
-    """
-    Perform prediction on preprocessed (normalized + padded) dataset.
-
-    Args:
-        X (np.ndarray): Preprocessed input data, shape (N, T, F)
-        Y_true (np.ndarray or None): Ground-truth labels
-        model (keras.Model): Keras model to perform inference
-        model_name (str): Name of the model for logging
-        source_name (str): Name of the dataset file
-        writer (csv.DictWriter): CSV writer to log results
-        packets (int, optional): Total packet count for evaluation
-        label_mode (str): "binary" or "multi" classification mode
-    """
-    # Count packets if not provided
-    if packets is None:
-        [packets] = count_packets_in_dataset([X])
-
-    # Run inference
-    pt0 = time.time()
-    Y_pred_probs = model.predict(X, batch_size=2048)
-    pt1 = time.time()
-    prediction_time = pt1 - pt0
-    
-    # Format labels if available
-    if label_mode == "multi":
-        Y_pred = Y_pred_probs.argmax(axis=1)
-        if Y_true is not None:
-            Y_true = np.array(Y_true)
-            if Y_true.ndim > 1:
-                Y_true = Y_true.argmax(axis=1)
-    else:
-        Y_pred = np.squeeze(Y_pred_probs > 0.5, axis=1)
-        if Y_true is not None:
-            Y_true = np.squeeze(np.array(Y_true))
-
-    # Write results
-    report_results(
-        Y_true=Y_true,
-        Y_pred=Y_pred,
-        packets=packets,
-        model_name=model_name,
-        data_source=source_name,
-        prediction_time=prediction_time,
-        writer=writer,
-        label_mode=label_mode
+        source_name=source_name,
+        prediction_time=prediction_time
     )
