@@ -2,7 +2,6 @@
 import hashlib
 import ipaddress
 import socket
-
 import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer
 
@@ -155,39 +154,6 @@ def parse_packet(pkt):
     except AttributeError:
         # Packet does not contain required fields (e.g., not IPv4)
         return None
-
-def infer_label_by_ip(src_ip, dst_ip, dataset='CIC-DDoS-2019'):
-    """
-    Infers the attack type label based on source and destination IP addresses.
-
-    This function uses a predefined mapping of attacker and victim IP addresses
-    for different datasets (e.g., CIC-IDS-2017/2018/2019) to determine whether a flow
-    belongs to a known attack type or is benign.
-
-    Args:
-        src_ip (str): Source IP address of the packet or flow.
-        dst_ip (str): Destination IP address of the packet or flow.
-        dataset (str): Dataset name used to look up IP-based attack rules.
-                       Default is 'CIC-DDoS-2019'.
-
-    Returns:
-        str: The attack type name if the IP pair matches a known attack,
-             otherwise 'Benign'.
-    """
-    from data.ddos_specs import DDOS_ATTACK_SPECS_EXTENDED  # IP-based rules for multiple datasets
-
-    # Return 'Benign' if the dataset has no known attack definitions
-    if dataset not in DDOS_ATTACK_SPECS_EXTENDED:
-        return 'Benign'
-
-    # Iterate through all attack types defined for this dataset
-    for attack_type, spec in DDOS_ATTACK_SPECS_EXTENDED[dataset].items():
-        # Match on known attacker and victim IP combinations
-        if src_ip in spec['attackers'] and dst_ip in spec['victims']:
-            return attack_type
-
-    # No match found: considered benign
-    return 'Benign'
 
 def parse_labels_multiclass(dataset_type):
     """
