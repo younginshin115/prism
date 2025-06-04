@@ -1,0 +1,16 @@
+{
+    "mappings": {
+      "properties": {
+        "timestamp": { "type": "date" },
+        "src_ip":    { "type": "ip" },
+        "dst_ip":    { "type": "ip" },
+        "packet_count": { "type": "integer" },
+        "label":     { "type": "integer" },
+        "probability": { "type": "float" },
+        "model":     { "type": "keyword" },
+        "source":    { "type": "keyword" },
+        "prediction_time": { "type": "float" }
+      }
+    }
+  }
+  
