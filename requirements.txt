@@ -7,3 +7,4 @@ pyshark
 keras-tuner==1.4.7
 matplotlib 
 seaborn
+kafka-python==2.0.2
