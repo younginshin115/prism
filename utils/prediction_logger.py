@@ -1,5 +1,9 @@
 # utils/prediction_logger.py
 
+from elasticsearch import Elasticsearch
+
+es = Elasticsearch("http://elasticsearch:9200")
+
 def log_sample_predictions(
     X, Y_pred, Y_probs, timestamps, src_ips, dst_ips,
     model_name, source_name, prediction_time
@@ -31,3 +35,8 @@ def log_sample_predictions(
             "prediction_time": prediction_time
         }
         print("[Sample Prediction]", doc)
+
+        try:
+            es.index(index="packet-predictions", document=doc)
+        except Exception as e:
+            print("[Elasticsearch ERROR]", e)
