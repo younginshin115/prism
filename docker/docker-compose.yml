@@ -71,12 +71,13 @@ services:
 
   prism-spark-job:
     build:
-      context: ../spark_job
+      context: ..
+      dockerfile: Dockerfile.spark
     command: >
       spark-submit
       --master spark://spark-master:7077
       --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0
-      main.py
+      spark_job/main.py
     depends_on:
       - kafka
       - spark-master
