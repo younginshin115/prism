@@ -8,4 +8,4 @@ keras-tuner==1.4.7
 matplotlib 
 seaborn
 kafka-python==2.0.2
-elasticsearch
+elasticsearch==8.13.0
