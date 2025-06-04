@@ -30,15 +30,16 @@ def run_packet_stream_to_kafka(source: str, topic: str = 'packets', interface_mo
 
     for packet in capture.sniff_continuously():
         try:
-            payload = {
-                "timestamp": str(packet.sniff_time),
-                "src_ip": packet.ip.src if hasattr(packet, 'ip') else None,
-                "dst_ip": packet.ip.dst if hasattr(packet, 'ip') else None,
-                "protocol": packet.transport_layer if hasattr(packet, 'transport_layer') else "Unknown",
-                "length": int(packet.length)
-            }
-            producer.send(topic, payload)
-            print(f"[KAFKA SENT] {payload}")
+            if hasattr(packet, 'ip'):
+                payload = {
+                    "timestamp": str(packet.sniff_time),
+                    "src_ip": packet.ip.src if hasattr(packet, 'ip') else None,
+                    "dst_ip": packet.ip.dst if hasattr(packet, 'ip') else None,
+                    "protocol": packet.transport_layer if hasattr(packet, 'transport_layer') else "Unknown",
+                    "length": int(packet.length)
+                }
+                producer.send(topic, payload)
+                print(f"[KAFKA SENT] {payload}")
         except Exception as e:
             print(f"[ERROR] Packet skipped: {e}")
 
