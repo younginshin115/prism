@@ -3,35 +3,31 @@ from pyspark.sql.functions import from_json, col, to_timestamp, window, struct, 
 from pyspark.sql.types import StructType, StringType, IntegerType, ArrayType, FloatType
 
 from keras.models import load_model
-from utils.prediction_utils import extract_model_metadata
+from utils.prediction_utils import extract_model_metadata, warm_up_model
 from utils.minmax_utils import static_min_max
 from data.live_process import process_packet_dicts
 from data.parser import parse_labels_multiclass
+from data.flow_utils import dataset_to_list_of_fragments
+from core.prediction_runner import run_prediction_loop
 
 model_path = "/app/models/10t-10n-IDS201X-LUCID-multi.h5"
 
-# 모델 로드
+# 모델 로드 및 메타데이터 준비
 model = load_model(model_path)
-
-# 모델 메타데이터 추출
 time_window, max_flow_len, model_name_string = extract_model_metadata(model_path)
-
-# 정적 최소/최대 값 계산
 mins, maxs = static_min_max(time_window)
-
-# 라벨 맵 생성
 label_map_dict, label_name_to_index = parse_labels_multiclass("DOS2017")
+warm_up_model(model)
+
 
 def debug_batch_factory(dataset_type, labels, max_flow_len, time_window):
     def debug_batch(df, batch_id):
-        print(f"=== [Batch {batch_id}] ===")
+        print(f"\n=== [Batch {batch_id}] ===")
 
-        # packet_list 컬럼 안에서 struct 원소들을 꺼냄
         packet_dicts = df.selectExpr("explode(packet_list) as packet") \
-                         .select("packet.*") \
-                         .toLocalIterator()
-        
-        # Row 객체를 dict로 변환
+                        .select("packet.*") \
+                        .toLocalIterator()
+
         packet_dicts = [row.asDict() for row in packet_dicts]
 
         samples = process_packet_dicts(
@@ -44,9 +40,22 @@ def debug_batch_factory(dataset_type, labels, max_flow_len, time_window):
 
         print("Sample Count:", len(samples))
         if samples:
-            print("First flow sample:", samples[0])
+            X, Y_true, keys = dataset_to_list_of_fragments(samples)
+            run_prediction_loop(
+                X_raw=X,
+                Y_true=Y_true,
+                model=model,
+                model_name=model_name_string,
+                source_name=f"batch_{batch_id}",
+                mins=mins,
+                maxs=maxs,
+                max_flow_len=max_flow_len,
+                writer=None,  # CSV로 저장하지 않음
+                label_mode="multi"
+            )
 
     return debug_batch
+
 
 def main():
     spark = SparkSession.builder \
@@ -72,7 +81,6 @@ def main():
 
     json_df = df.selectExpr("CAST(value AS STRING) as json_str")
     parsed_df = json_df.select(from_json(col("json_str"), packet_schema).alias("packet")).select("packet.*")
-
     parsed_df = parsed_df.withColumn("event_time", to_timestamp(col("timestamp"), "yyyy-MM-dd HH:mm:ss.SSSSSS"))
 
     grouped_df = parsed_df.withWatermark("event_time", "1 minute").groupBy(
@@ -83,7 +91,7 @@ def main():
         ).alias("packet_list")
     )
 
-    # ✅ 여기서 factory로 만든 함수 바인딩!
+    # Debug용 예측 함수 설정
     debug_batch = debug_batch_factory(
         dataset_type="DOS2017",
         labels=label_map_dict,
@@ -97,6 +105,7 @@ def main():
         .start()
 
     query.awaitTermination()
+
 
 if __name__ == "__main__":
     main()

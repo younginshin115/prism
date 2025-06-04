@@ -52,11 +52,13 @@ def run_prediction_loop(
     if label_mode == "multi":
         Y_pred = Y_pred_probs.argmax(axis=1)
         if Y_true is not None:
-            Y_true = Y_true.argmax(axis=1)
+            Y_true = np.array(Y_true)
+            if Y_true.ndim > 1:
+                Y_true = Y_true.argmax(axis=1)
     else:
         Y_pred = np.squeeze(Y_pred_probs > 0.5, axis=1)
         if Y_true is not None:
-            Y_true = np.squeeze(Y_true)
+            Y_true = np.squeeze(np.array(Y_true))
 
     # Write results
     report_results(
@@ -103,15 +105,17 @@ def run_prediction_loop_preprocessed(
     pt1 = time.time()
     prediction_time = pt1 - pt0
     
-    # Format labels
+    # Format labels if available
     if label_mode == "multi":
         Y_pred = Y_pred_probs.argmax(axis=1)
         if Y_true is not None:
-            Y_true = Y_true.argmax(axis=1)
+            Y_true = np.array(Y_true)
+            if Y_true.ndim > 1:
+                Y_true = Y_true.argmax(axis=1)
     else:
         Y_pred = np.squeeze(Y_pred_probs > 0.5, axis=1)
         if Y_true is not None:
-            Y_true = np.squeeze(Y_true)
+            Y_true = np.squeeze(np.array(Y_true))
 
     # Write results
     report_results(

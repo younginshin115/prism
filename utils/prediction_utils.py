@@ -50,18 +50,22 @@ def warm_up_model(model, sample_file: str = None, input_shape: tuple = None):
         model (keras.Model): Loaded Keras model
         sample_file (str, optional): Path to HDF5 file to load dummy input from
         input_shape (tuple, optional): Shape of a dummy input (e.g., (time_window, flow_len, 1))
+                                       If None, infer from model.input_shape.
 
     Raises:
-        ValueError: If neither sample_file nor input_shape is provided
+        ValueError: If neither sample_file nor input_shape can be resolved
     """
     if sample_file:
         X, _ = load_dataset(sample_file)
         dummy_input = X[:1]
-    elif input_shape:
-        dummy_input = np.zeros((1,) + input_shape)  # Add batch dimension
     else:
-        raise ValueError("Either sample_file or input_shape must be provided.")
+        # Use model's input shape if not explicitly provided
+        inferred_shape = input_shape or model.input_shape[1:]  # drop batch dimension
+        if not inferred_shape or None in inferred_shape:
+            raise ValueError(f"Cannot infer input shape from model: {model.input_shape}")
+        dummy_input = np.zeros((1,) + inferred_shape)  # Add batch dimension
 
+    print(f"[WarmUp] Dummy input shape: {dummy_input.shape}")
     _ = model.predict(dummy_input, batch_size=1)
 
 
